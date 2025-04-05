@@ -343,7 +343,7 @@ const createChordImagePopup = (chord) => {
     nextBtn.textContent = '→';
     nextBtn.onclick = (e) => {
         e.stopPropagation();
-        currentPosition = currentPosition < 4 ? currentPosition + 1 : 1;
+        currentPosition = currentPosition < 6 ? currentPosition + 1 : 1;
         updateImage();
     };
     
