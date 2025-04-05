@@ -155,6 +155,11 @@
             <div id="keys-table">None</div>
         </div>
         <br>
+        <div id="parallel-keys">
+            <strong>Parallel keys:</strong>
+            <div id="parallel-keys-table">None</div>
+        </div>
+        <br>
         <div>
             <strong>Transposed keys:</strong>
             <div id="transposed-keys-table">None</div>
@@ -188,11 +193,19 @@ const MINOR_KEYS = {
     "Am": ["Am", "Bdim", "C", "Dm", "Em", "F", "G"],
     "Em": ["Em", "F#dim", "G", "Am", "Bm", "C", "D"],
     "Bm": ["Bm", "C#dim", "D", "Em", "F#m", "G", "A"],
-    "C#m": ["C#m", "D#dim", "E", "F#m", "G#m", "A", "B"],
-    "F#m": ["F#m", "G#dim", "A", "Bm", "C#m", "D", "E"],
-    "G#m": ["G#m", "A#dim", "B", "C#m", "D#m", "E", "F#"],
-    "D#m": ["D#m", "E#dim", "F#", "G#m", "A#m", "B", "C#"],
-    "A#m": ["A#m", "B#dim", "C#", "D#m", "F", "G#", "A"]
+    "F#m": ["F#m", "G#dim", "A", "Bm", "C#", "D", "E"],
+    "C#m": ["C#m", "D#dim", "E", "F#m", "G#", "A", "B"],
+    "G#m": ["G#m", "A#dim", "B", "C#m", "D#", "E", "F#"],
+    "D#m": ["D#m", "E#dim", "F#", "G#m", "A#", "B", "C#"],
+    "A#m": ["A#m", "B#dim", "C#", "D#", "E", "F#", "G#"],
+    "Dm": ["Dm", "Edim", "F", "Gm", "Am", "Bb", "C"],
+    "Gm": ["Gm", "Adim", "Bb", "Cm", "Dm", "Eb", "F"],
+    "Cm": ["Cm", "Ddim", "Eb", "Fm", "Gm", "Ab", "Bb"],
+    "Fm": ["Fm", "Gdim", "Ab", "Bbm", "Cm", "Db", "Eb"],
+    "Bbm": ["Bbm", "Cdim", "Db", "Ebm", "Fm", "Gb", "Ab"],
+    "Ebm": ["Ebm", "Fdim", "Gb", "Abm", "Bbm", "Cb", "Db"],
+    "Abm": ["Abm", "Bbdim", "Cb", "Dbm", "Ebm", "Fb", "Gb"],
+    "Dbm": ["Dbm", "Ebdim", "Fb", "Gb", "Abm", "A", "B"]
 };
 
 let input = '';
@@ -227,18 +240,29 @@ const findPossibleKeys = (chords) => {
     // Check for major keys
     Object.entries(MAJOR_KEYS).forEach(([key, diatonicChords]) => {
         if (chords.every(c => diatonicChords.includes(c))) {
-            matches.push({ key, diatonicChords });
+            matches.push({ key, diatonicChords, type: 'major' });
         }
     });
 
     // Check for minor keys
     Object.entries(MINOR_KEYS).forEach(([key, diatonicChords]) => {
         if (chords.every(c => diatonicChords.includes(c))) {
-            matches.push({ key, diatonicChords });
+            matches.push({ key, diatonicChords, type: 'minor' });
         }
     });
 
     return matches;
+};
+
+const getParallelKey = (key) => {
+    // If the key is major (like "D"), return its parallel minor ("Dm")
+    if (key.endsWith('m')) {
+        // It's a minor key, return the parallel major (remove 'm')
+        return key.slice(0, -1);
+    } else {
+        // It's a major key, return the parallel minor (add 'm')
+        return key + 'm';
+    }
 };
 
 const getChordImageUrl = (chord, position = 1) => {
@@ -408,6 +432,30 @@ const handleInputChange = () => {
                 ${renderChordTable(diatonicChords.map((chord, idx) => ({ chord, degree: DEGREE_LABELS[idx] })))}
             </div>
         `).join('') : 'None';
+
+    // Render parallel keys - now showing both directions
+    const parallelKeysHTML = possibleKeys.map(({ key, diatonicChords, type }) => {
+        const parallelKey = getParallelKey(key);
+        if (!parallelKey) return '';
+        
+        let parallelDiatonicChords = [];
+        if (type === 'major') {
+            parallelDiatonicChords = MINOR_KEYS[parallelKey] || [];
+        } else {
+            parallelDiatonicChords = MAJOR_KEYS[parallelKey] || [];
+        }
+        
+        if (parallelDiatonicChords.length === 0) return '';
+        
+        return `
+            <div>
+                <strong>${parallelKey}:</strong>
+                ${renderChordTable(parallelDiatonicChords.map((chord, idx) => ({ chord, degree: DEGREE_LABELS[idx] })))}
+            </div>
+        `;
+    }).join('');
+    
+    document.getElementById('parallel-keys-table').innerHTML = parallelKeysHTML || 'None';
 
     const transposedKeys = possibleKeys.map(({ key, diatonicChords }) => ({
         key: transposeChord(key, interval),
