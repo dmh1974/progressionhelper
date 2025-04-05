@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Progression Helper</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            font-size: 24px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        h3 {
+            text-align: center;
+        }
+        input, button {
+            padding: 10px;
+            margin: 5px 0;
+            font-size: 16px;
+        }
+        .flex {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .text-center {
+            text-align: center;
+        }
+        table {
+            width: 100%;
+            margin-top: 10px;
+            border-collapse: collapse;
+        }
+        table th, table td {
+            padding: 8px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+        .output {
+            background-color: #f0f0f0;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 16px;
+            border-radius: 4px;
+        }
+        .text-sm {
+            font-size: 14px;
+        }
+        .highlight {
+            background-color: yellow;
+            font-weight: bold;
+        }
+        
+        /* Chord image hover styles */
+        .chord-with-hover {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+        }
+        .chord-image-popup {
+            display: none;
+            position: absolute;
+            z-index: 100;
+            left: 50%;
+            transform: translateX(-50%);
+            bottom: 100%;
+            background-color: white;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            margin-bottom: 10px;
+            text-align: center;
+            /* Add transition for smooth appearance */
+            opacity: 0;
+            transition: opacity 0.1s ease;
+        }
+        .chord-image-popup.showing {
+            display: block;
+            opacity: 1;
+            transition-delay: 0s;
+        }
+        .chord-image-popup.hiding {
+            display: block;
+            opacity: 0;
+            transition-delay: 0.5s;
+        }
+        .chord-image-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 5px;
+        }
+        .chord-image-nav button {
+            background: none;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            padding: 2px 8px;
+            cursor: pointer;
+        }
+        .chord-image-nav button:hover {
+            background-color: #f0f0f0;
+        }
+        .chord-position {
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+        .chord-hover-container {
+            position: relative;
+            display: inline-block;
+        }
+        .chord-hover-area {
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            height: 160px;
+            z-index: 99;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Progression Helper</h1>
+    <h3>By <a href="https://davidharrisonmusic.com" target="_blank">DavidHarrisonMusic.com</a></h3>
+    <center><input style="width: 400px; max-width: 90%;" id="chords-input" type="text" placeholder="Enter chord progression (e.g. G C Am D)" /></center>
+    
+    <div class="flex">
+        <button id="transpose-minus">-1</button>&nbsp;
+        <span id="transpose-value" class="text-sm">Transpose: 0</span>&nbsp;
+        <button id="transpose-plus">+1</button>&nbsp;
+    </div>
+    
+    <center><button id="transpose-reset">Reset</button></center>
+
+    <div id="output" class="output"></div>
+    
+    <div class="text-sm">
+        <div id="possible-keys">
+            <strong>Possible keys:</strong>
+            <div id="keys-table">None</div>
+        </div>
+        <br>
+        <div>
+            <strong>Transposed keys:</strong>
+            <div id="transposed-keys-table">None</div>
+        </div>
+    </div>
+</div>
+
+<script>
+const CHORDS_SHARP = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+const CHORDS_FLAT = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
+const DEGREE_LABELS = ["I", "ii", "iii", "IV", "V", "vi", "vii°"];
+const MAJOR_KEYS = {
+    "C": ["C", "Dm", "Em", "F", "G", "Am", "Bdim"],
+    "G": ["G", "Am", "Bm", "C", "D", "Em", "F#dim"],
+    "D": ["D", "Em", "F#m", "G", "A", "Bm", "C#dim"],
+    "A": ["A", "Bm", "C#m", "D", "E", "F#m", "G#dim"],
+    "E": ["E", "F#m", "G#m", "A", "B", "C#m", "D#dim"],
+    "B": ["B", "C#m", "D#m", "E", "F#", "G#m", "A#dim"],
+    "F#": ["F#", "G#m", "A#m", "B", "C#", "D#m", "E#dim"],
+    "C#": ["C#", "D#m", "E#m", "F#", "G#", "A#m", "B#dim"],
+    "F": ["F", "Gm", "Am", "Bb", "C", "Dm", "Edim"],
+    "Bb": ["Bb", "Cm", "Dm", "Eb", "F", "Gm", "Adim"],
+    "Eb": ["Eb", "Fm", "Gm", "Ab", "Bb", "Cm", "Ddim"],
+    "Ab": ["Ab", "Bbm", "Cm", "Db", "Eb", "Fm", "Gdim"],
+    "Db": ["Db", "Ebm", "Fm", "Gb", "Ab", "Bbm", "Cdim"],
+    "Gb": ["Gb", "Abm", "Bbm", "Cb", "Db", "Ebm", "Fdim"],
+    "Cb": ["Cb", "Dbm", "Ebm", "Fb", "Gb", "Abm", "Bbdim"]
+};
+
+const MINOR_KEYS = {
+    "Am": ["Am", "Bdim", "C", "Dm", "Em", "F", "G"],
+    "Em": ["Em", "F#dim", "G", "Am", "Bm", "C", "D"],
+    "Bm": ["Bm", "C#dim", "D", "Em", "F#m", "G", "A"],
+    "C#m": ["C#m", "D#dim", "E", "F#m", "G#m", "A", "B"],
+    "F#m": ["F#m", "G#dim", "A", "Bm", "C#m", "D", "E"],
+    "G#m": ["G#m", "A#dim", "B", "C#m", "D#m", "E", "F#"],
+    "D#m": ["D#m", "E#dim", "F#", "G#m", "A#m", "B", "C#"],
+    "A#m": ["A#m", "B#dim", "C#", "D#m", "F", "G#", "A"]
+};
+
+let input = '';
+let interval = 0;
+let originalChords = [];
+
+const getChordIndex = (chordRoot, useSharps = true) => {
+    const scale = useSharps ? CHORDS_SHARP : CHORDS_FLAT;
+    return scale.findIndex(c => c === chordRoot);
+};
+
+const parseChord = (chord) => {
+    const match = chord.match(/^[A-G](#|b)?/);
+    if (!match) return { root: chord, suffix: "" };
+    const root = match[0];
+    const suffix = chord.slice(root.length);
+    return { root, suffix };
+};
+
+const transposeChord = (chord, interval, useSharps = true) => {
+    const { root, suffix } = parseChord(chord);
+    const scale = useSharps ? CHORDS_SHARP : CHORDS_FLAT;
+    const index = getChordIndex(root, useSharps);
+    if (index === -1) return chord;
+    const newIndex = (index + interval + 12) % 12;
+    return scale[newIndex] + suffix;
+};
+
+const findPossibleKeys = (chords) => {
+    const matches = [];
+    
+    // Check for major keys
+    Object.entries(MAJOR_KEYS).forEach(([key, diatonicChords]) => {
+        if (chords.every(c => diatonicChords.includes(c))) {
+            matches.push({ key, diatonicChords });
+        }
+    });
+
+    // Check for minor keys
+    Object.entries(MINOR_KEYS).forEach(([key, diatonicChords]) => {
+        if (chords.every(c => diatonicChords.includes(c))) {
+            matches.push({ key, diatonicChords });
+        }
+    });
+
+    return matches;
+};
+
+const getChordImageUrl = (chord, position = 1) => {
+    const { root, suffix } = parseChord(chord);
+    
+    // Convert flats to sharps for the URL
+    let urlRoot;
+    switch(root) {
+        case 'Db': urlRoot = 'c_sharp'; break;
+        case 'Eb': urlRoot = 'd_sharp'; break;
+        case 'Gb': urlRoot = 'f_sharp'; break;
+        case 'Ab': urlRoot = 'g_sharp'; break;
+        case 'Bb': urlRoot = 'a_sharp'; break;
+        default: 
+            urlRoot = root.toLowerCase().replace('#', '_sharp');
+    }
+    
+    // Handle different chord types
+    let chordType;
+    if (suffix.toLowerCase() === 'm') {
+        chordType = 'minor';
+    } else if (suffix.toLowerCase() === 'dim') {
+        chordType = 'dim';
+    } else {
+        chordType = 'major';
+    }
+    
+    return `https://www.all-guitar-chords.com/chords/img/guitar-chord-${urlRoot}-${chordType}-${position}.svg`;
+};
+
+const createChordImagePopup = (chord) => {
+    const popup = document.createElement('div');
+    popup.className = 'chord-image-popup';
+    
+    let currentPosition = 1;
+    let imgLoaded = false;
+    let hideTimeout = null;
+    
+    const positionDisplay = document.createElement('div');
+    positionDisplay.className = 'chord-position';
+    positionDisplay.textContent = `Position ${currentPosition}`;
+    
+    const img = document.createElement('img');
+    img.alt = `${chord} guitar chord - variation ${currentPosition}`;
+    img.width = 130;
+    img.height = 130;
+    
+    const updateImage = () => {
+        positionDisplay.textContent = `Position ${currentPosition}`;
+        img.src = getChordImageUrl(chord, currentPosition);
+        img.onerror = () => {
+            // If image doesn't exist, try another position
+            if (currentPosition < 4) {
+                currentPosition++;
+                updateImage();
+            } else if (currentPosition > 1) {
+                currentPosition = 1;
+                updateImage();
+            } else {
+                img.src = '';
+                img.alt = 'Image not available';
+            }
+        };
+    };
+    
+    const nav = document.createElement('div');
+    nav.className = 'chord-image-nav';
+    
+    const prevBtn = document.createElement('button');
+    prevBtn.textContent = '←';
+    prevBtn.onclick = (e) => {
+        e.stopPropagation();
+        currentPosition = currentPosition > 1 ? currentPosition - 1 : 4;
+        updateImage();
+    };
+    
+    const nextBtn = document.createElement('button');
+    nextBtn.textContent = '→';
+    nextBtn.onclick = (e) => {
+        e.stopPropagation();
+        currentPosition = currentPosition < 4 ? currentPosition + 1 : 1;
+        updateImage();
+    };
+    
+    nav.appendChild(prevBtn);
+    nav.appendChild(nextBtn);
+    
+    popup.appendChild(positionDisplay);
+    popup.appendChild(img);
+    popup.appendChild(nav);
+    
+    const showPopup = () => {
+        if (hideTimeout) {
+            clearTimeout(hideTimeout);
+            hideTimeout = null;
+        }
+        
+        if (!imgLoaded) {
+            updateImage();
+            imgLoaded = true;
+        }
+        
+        popup.classList.remove('hiding');
+        popup.classList.add('showing');
+    };
+    
+    const hidePopup = () => {
+        popup.classList.remove('showing');
+        popup.classList.add('hiding');
+        
+        hideTimeout = setTimeout(() => {
+            popup.classList.remove('hiding');
+            hideTimeout = null;
+        }, 500); // Match this with the transition-delay
+    };
+    
+    return { popup, showPopup, hidePopup };
+};
+
+const renderChordTable = (allChords) => {
+    return ` 
+        <table>
+            <thead>
+                <tr>
+                    ${allChords.map(({ degree }) => `<th>${degree}</th>`).join('')}
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    ${allChords.map(({ chord }) => {
+                        const shouldHighlight = originalChords.includes(chord);
+                        return `<td class="${shouldHighlight ? 'highlight' : ''}">
+                            <span class="chord-with-hover">${chord}</span>
+                        </td>`;
+                    }).join('')}
+                </tr>
+            </tbody>
+        </table>
+    `;
+};
+
+const setupChordHover = () => {
+    document.querySelectorAll('.chord-with-hover').forEach(element => {
+        const chord = element.textContent;
+        const { popup, showPopup, hidePopup } = createChordImagePopup(chord);
+        element.appendChild(popup);
+        
+        element.addEventListener('mouseenter', showPopup);
+        element.addEventListener('mouseleave', hidePopup);
+    });
+};
+
+const handleInputChange = () => {
+    input = document.getElementById('chords-input').value.trim();
+    const chords = input.split(/\s+/).filter(Boolean);
+    originalChords = chords.map(chord => chord.charAt(0).toUpperCase() + chord.slice(1).toLowerCase());
+    const formattedChords = [...originalChords];
+    const transposed = formattedChords.map(chord => transposeChord(chord, interval));
+    
+    document.getElementById('output').innerText = transposed.join(' ');
+    const possibleKeys = findPossibleKeys(formattedChords);
+    
+    document.getElementById('keys-table').innerHTML = possibleKeys.length ? 
+        possibleKeys.map(({ key, diatonicChords }) => `
+            <div>
+                <strong>${key}:</strong>
+                ${renderChordTable(diatonicChords.map((chord, idx) => ({ chord, degree: DEGREE_LABELS[idx] })))}
+            </div>
+        `).join('') : 'None';
+
+    const transposedKeys = possibleKeys.map(({ key, diatonicChords }) => ({
+        key: transposeChord(key, interval),
+        diatonicChords: diatonicChords.map((chord, idx) => ({
+            chord: transposeChord(chord, interval),
+            degree: DEGREE_LABELS[idx]
+        }))
+    }));
+
+    document.getElementById('transposed-keys-table').innerHTML = transposedKeys.length ? 
+        transposedKeys.map(({ key, diatonicChords }) => `
+            <div>
+                <strong>${key}:</strong>
+                ${renderChordTable(diatonicChords)}
+            </div>
+        `).join('') : 'None';
+    
+    // Setup hover effects after rendering
+    setTimeout(setupChordHover, 0);
+};
+
+// Event listeners
+document.getElementById('transpose-minus').addEventListener('click', () => {
+    interval--;
+    document.getElementById('transpose-value').innerText = `Transpose: ${interval}`;
+    handleInputChange();
+});
+
+document.getElementById('transpose-plus').addEventListener('click', () => {
+    interval++;
+    document.getElementById('transpose-value').innerText = `Transpose: ${interval}`;
+    handleInputChange();
+});
+
+document.getElementById('transpose-reset').addEventListener('click', () => {
+    interval = 0;
+    document.getElementById('transpose-value').innerText = `Transpose: ${interval}`;
+    handleInputChange();
+});
+
+document.getElementById('chords-input').addEventListener('input', function(event) {
+    let inputValue = event.target.value;
+    
+    // Format input to capitalize first letter of each chord
+    let formattedValue = inputValue
+        .split(' ')
+        .map(word => word.length > 0 ? 
+            word.charAt(0).toUpperCase() + word.slice(1).toLowerCase() : 
+            word
+        )
+        .join(' ');
+
+    event.target.value = formattedValue;
+    handleInputChange();
+});
+
+// Initialize
+handleInputChange();
+</script>
+
+</body>
+</html>
