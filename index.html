@@ -315,7 +315,7 @@ const createChordImagePopup = (chord) => {
         img.src = getChordImageUrl(chord, currentPosition);
         img.onerror = () => {
             // If image doesn't exist, try another position
-            if (currentPosition < 6) {
+            if (currentPosition < 4) {
                 currentPosition++;
                 updateImage();
             } else if (currentPosition > 1) {
@@ -335,7 +335,7 @@ const createChordImagePopup = (chord) => {
     prevBtn.textContent = '←';
     prevBtn.onclick = (e) => {
         e.stopPropagation();
-        currentPosition = currentPosition > 1 ? currentPosition - 1 : 6;
+        currentPosition = currentPosition > 1 ? currentPosition - 1 : 4;
         updateImage();
     };
     
@@ -343,7 +343,7 @@ const createChordImagePopup = (chord) => {
     nextBtn.textContent = '→';
     nextBtn.onclick = (e) => {
         e.stopPropagation();
-        currentPosition = currentPosition < 6 ? currentPosition + 1 : 1;
+        currentPosition = currentPosition < 4 ? currentPosition + 1 : 1;
         updateImage();
     };
     
