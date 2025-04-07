@@ -225,11 +225,16 @@ const parseChord = (chord) => {
     return { root, suffix };
 };
 
-const transposeChord = (chord, interval, useSharps = true) => {
+const transposeChord = (chord, interval) => {
     const { root, suffix } = parseChord(chord);
-    const scale = useSharps ? CHORDS_SHARP : CHORDS_FLAT;
-    const index = getChordIndex(root, useSharps);
+    
+    // Choose scale based on whether chord uses flat or sharp
+    const isFlat = root.includes('b');
+    const scale = isFlat ? CHORDS_FLAT : CHORDS_SHARP;
+    
+    const index = scale.findIndex(c => c === root);
     if (index === -1) return chord;
+    
     const newIndex = (index + interval + 12) % 12;
     return scale[newIndex] + suffix;
 };
